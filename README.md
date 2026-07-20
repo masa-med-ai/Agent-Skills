@@ -24,3 +24,4 @@ Claude（claude.ai / Claude Code）向けの自作 Agent Skills 集。各 `.skil
 - PubMed 系スキルのツール名プレフィックス（`mcp__pubmed__*`）は MCP サーバーの登録名に合わせて読み替える。
 - `ai-journal-watch` / `ai-news-digest` の「関心領域」（🔍 で優先表示するトピック）は既定で消化器・内視鏡向け。SKILL.md 冒頭の設定を書き換えれば他領域にも使える。
 - `josler-byoreki-review` は日本内科学会『病歴要約 作成と評価の手引き』に準拠した参照資料を同梱するため `license: Proprietary`（個人利用の範囲で使用のこと）。
+- `notion-upload-image` は `agents/openai.yaml` を同梱しており、ChatGPT / Codex 側のエージェント設定にも対応。
