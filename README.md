@@ -18,11 +18,9 @@ Claude（claude.ai / Claude Code）向けの自作 Agent Skills 集。各 `.skil
 | `ai-journal-watch` | 主要医学誌RSSからAI関連新着だけを抽出して日本語配信（既読管理つき） | Python 3 |
 | `ai-news-digest` | 過去24時間のAIニュース（企業・一般・医療）を出典リンク付きで日本語まとめ | Web検索 |
 | `notion-upload-image` | ローカル画像をJPEG圧縮→Base64埋め込みSVGとしてNotionへアップロード | Notion MCP, ImageMagick |
-| `mail-attachment-to-calendar` | Gmail添付をDrive経由でGoogleカレンダー予定に正式添付（Tars/VPS環境前提） | gogcli, Google Calendar MCP |
-| `tomorrow-weather-outfit` | 翌日の横浜の天気を取得し服装・持ち物を提案 | wttr.in |
-| `transit-route` | 日本の公共交通の乗り換え・経路検索（Transit API） | api.transit.ls8h.com |
 
 ## メモ
 
 - PubMed 系スキルのツール名プレフィックス（`mcp__pubmed__*`）は MCP サーバーの登録名に合わせて読み替える。
-- 一部スキルは個人環境（Tars秘書運用・Discord配信・横浜在住）を前提にした記述を含む。
+- `ai-journal-watch` / `ai-news-digest` の「関心領域」（🔍 で優先表示するトピック）は既定で消化器・内視鏡向け。SKILL.md 冒頭の設定を書き換えれば他領域にも使える。
+- `josler-byoreki-review` は日本内科学会『病歴要約 作成と評価の手引き』に準拠した参照資料を同梱するため `license: Proprietary`（個人利用の範囲で使用のこと）。
