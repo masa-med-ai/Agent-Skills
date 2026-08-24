@@ -20,7 +20,7 @@ Claude（claude.ai / Claude Code）向けの自作 Agent Skills 集。各スキ�
 | 文献検索 | [`search-japanese-literature`](#search-japanese-literature) | J-STAGE WebAPI で和文文献をフィールド指定検索＋抄録取得 | Python 3（標準ライブラリのみ） |
 | 原稿支援 | [`pubmed-reference-verifier`](#pubmed-reference-verifier) | 本文中引用と参考文献リストの整合性検証・PubMed 照合・修正提案 | PubMed MCP |
 | 論文整理 | [`paper-summarize-to-notion`](#paper-summarize-to-notion) | 論文1本を日本語要約＋グラフィカルアブストラクト化して Notion DB に登録 | Notion MCP, 画像生成 |
-| 論文整理 | [`paper-to-one-slide-ja`](#paper-to-one-slide-ja) | 論文 PDF を日本語1枚スライド（.pptx）に凝縮 | Python 3, Presentations/pdf スキル |
+| 論文整理 | [`paper-to-one-slide-ja`](#paper-to-one-slide-ja) | 論文 PDF を日英各1枚のスライド（.pptx、既定で2枚組）に凝縮 | Python 3, Presentations/pdf スキル |
 | 情報収集 | [`ai-journal-watch`](#ai-journal-watch) | 主要医学誌 RSS から AI 関連新着だけを日本語配信（既読管理つき） | Python 3 |
 | 情報収集 | [`ai-news-digest`](#ai-news-digest) | 過去24時間の AI ニュース（企業・一般・医療）を出典付きで日本語まとめ | Web 検索 |
 | 資料作成 | [`image-to-pptx`](#image-to-pptx) | 図解画像を「編集可能な」PowerPoint にハイブリッド再現 | pptxgenjs, LibreOffice, PIL |
@@ -138,15 +138,17 @@ J-STAGE WebAPI（記事検索 `service=3`、API キー不要）で和文文献�
 
 ### paper-to-one-slide-ja
 
-論文 PDF を読み、「何を調べ、何が分かり、何を意味するか」が30秒で伝わる日本語1枚 PowerPoint スライドに凝縮するスキル。抄読会・学会・研究ミーティング向け。
+論文 PDF を読み、「何を調べ、何が分かり、何を意味するか」が30秒で伝わる1枚 PowerPoint スライドに凝縮するスキル。**既定で同一 PPTX に日本語版（1枚目）と英語版（2枚目）の2枚**を作る。抄読会・学会・研究ミーティング向け。
 
 **できること**
 - `scripts/extract_paper.py` で PDF 本文・全ページ画像・埋め込み画像を一括抽出
 - スライド化の前に「根拠メモ」（デザイン、N 数、主要評価項目、群別の分子/分母、95% CI、P 値など）を原文から確定し、数値の出所を追跡可能にする
 - タイトルは論文の結論を表す一文にする。図表は**必ず原著から抽出**（自作グラフ・生成画像への置き換え禁止）
-- フォントは日本語メイリオ＋英数字 Segoe UI。1枚要約専用のレイアウト設計。`references/quality-gates.md` の品質基準（文章量・図表選択・視覚 QA）で検証
+- 日英2枚は同一レイアウト・同一図表・同一数値で、`references/quality-gates.md` の日英パリティ基準（数値完全一致、翻訳で結論の強さを変えない等）で検証。「日本語のみ」「英語のみ」「別ファイルで」の指定にも対応
+- 納品前に `scripts/normalize_textboxes.py` で全テキストボックスを「折り返しあり・自動調整なし」に正規化。生成 PPTX にありがちな `wrap="none"` や `normAutofit`（fontScale が残るとフォントサイズ変更が効かなくなる）を除去し、**受け取った人が PowerPoint 上で文字サイズを自由に変更できる**状態にする（`--check` で機械判定）
+- フォントは日本語版がメイリオ＋Segoe UI、英語版が Segoe UI 統一。1枚要約専用のレイアウト設計
 
-**使い方**：「この PDF を1枚で要約」「論文の概要スライドを作成」「原著の図表を使ってまとめて」。
+**使い方**：「この PDF を1枚で要約」「論文の概要スライドを作成」「原著の図表を使ってまとめて」「日英で」。
 
 ---
 
