@@ -12,7 +12,7 @@ Claude（claude.ai / Claude Code）向けの自作 Agent Skills 集。各スキ�
 
 | カテゴリ | スキル | 一言でいうと | 主な依存 |
 |---|---|---|---|
-| 文献検索 | [`pubmed-search`](#pubmed-search) | PubMed MCP を使った質の高い文献検索の作法（PICO・MeSH・引用形式） | PubMed MCP |
+| 文献検索 | [`pubmed-search`](#pubmed-search) | 質の高い PubMed 検索の作法（PICO・MeSH・引用形式）。MCP が無くても同梱 CLI で動く | PubMed MCP または Python 3（同梱 CLI） |
 | 文献検索 | [`pubmed-eutils-search`](#pubmed-eutils-search) | MCP なしで NCBI E-utilities を直接叩く PubMed 検索 CLI | Python 3（標準ライブラリのみ） |
 | 文献検索 | [`pubmed-systematic-review`](#pubmed-systematic-review) | 系統的検索→抄録から数値を正確に抽出して Excel/スライド化 | PubMed MCP |
 | 文献検索 | [`arxiv-search`](#arxiv-search) | arXiv 公式 API で再現可能なプレプリント検索（同梱 CLI） | Python 3（標準ライブラリのみ） |
@@ -33,15 +33,16 @@ Claude（claude.ai / Claude Code）向けの自作 Agent Skills 集。各スキ�
 
 ### pubmed-search
 
-PubMed MCP ツール群（search / count / fetch_batch / find_similar_articles / get_citation_counts / get_full_text / convert_ids など）を使った医学文献検索の「作法」を定めるスキル。
+医学文献検索の「作法」を定めるスキル。**バックエンド非依存**で、PubMed MCP ツール群（search / count / fetch_batch / find_similar_articles / get_citation_counts / get_full_text / convert_ids など）があればそれを使い、MCP が無い環境では同梱 CLI（`scripts/pubmed_eutils.py`、NCBI E-utilities 直叩き・Python 標準ライブラリのみ）に自動フォールバックして同じワークフローを実行する。
 
 **できること**
+- バックエンド選択の明文化：MCP（プレフィックス揺れ対応）→ 同梱 CLI → どちらも不可なら「検索できない」と報告（記憶で代用しない）。操作対応表で MCP ツール名と CLI コマンドを1対1にマッピング
 - 臨床質問を PICO で概念分解 → MeSH ＋ フリーワード（tiab）併用の構造化クエリを構築
-- `count` で検索式の妥当性を確認してから本検索する段階的ワークフロー
-- 出典の捏造防止：PMID・著者・誌名・年は必ずツールの返り値からのみ引用
+- `count` で件数と `query_translation`（PubMed の自動用語マッピング）を確認してから本検索する段階的ワークフロー
+- 出典の捏造防止：PMID・著者・誌名・年は必ずツールの返り値からのみ引用。`fetch_batch` の欠落 PMID を推定で埋めない
 - 引用フォーマットの統一：`[*First Author, 誌名, Year*](https://pubmed.ncbi.nlm.nih.gov/PMID/)` のハイパーリンク付き形式を強制
 
-**使い方**：「〜のエビデンスを調べて」「〜の RCT を探して」など文献検索の依頼で自動的に発動。明示的に「PubMed で」と言わなくてもよい。
+**使い方**：「〜のエビデンスを調べて」「〜の RCT を探して」など文献検索の依頼で自動的に発動。明示的に「PubMed で」と言わなくてもよい。複数文献の数値抽出・表化は `pubmed-systematic-review`、原稿の引用検証は `pubmed-reference-verifier` に委譲する。
 
 ### pubmed-eutils-search
 
@@ -54,6 +55,8 @@ PubMed MCP サーバーを使わず、公式 NCBI E-utilities / iCite / PMC API 
 - `NCBI_API_KEY` / `NCBI_EMAIL` 環境変数に対応（キーは出力しない設計）
 
 **使い方**：PubMed MCP が使えない・使いたくない環境での文献検索で発動。`python3 scripts/pubmed_eutils.py --help` で全コマンド確認。エンドポイント選択や結果の解釈は `references/capabilities.md` 参照。
+
+> 補足: 同じ CLI は `pubmed-search` にもフォールバックとして同梱した。Claude 環境では `pubmed-search` 1つで MCP あり/なし両対応になるため、本スキルは「MCP を一切使わない前提」の環境（ChatGPT / Codex 等）向けの単体配布版という位置づけ。
 
 ### pubmed-systematic-review
 
@@ -217,5 +220,5 @@ J-STAGE WebAPI（記事検索 `service=3`、API キー不要）で和文文献�
 
 - PubMed 系スキルのツール名プレフィックス（`mcp__pubmed__*`）は MCP サーバーの登録名に合わせて読み替える（`mcp__pubmed-remote__` 等になっている環境では frontmatter の `allowed-tools` も合わせる）。
 - `ai-journal-watch` / `ai-news-digest` の「関心領域」（🔍 で優先表示するトピック）は既定で消化器・内視鏡向け。SKILL.md 冒頭の設定を書き換えれば他領域にも使える。
-- `notion-upload-image` / `paper-summarize-to-notion` / `paper-to-one-slide-ja` / `pubmed-eutils-search` / `arxiv-search` / `arxiv-medarxiv-search` / `search-japanese-literature` は `agents/openai.yaml` を同梱しており、ChatGPT / Codex 側のエージェント設定にも対応。
+- `notion-upload-image` / `paper-summarize-to-notion` / `paper-to-one-slide-ja` / `pubmed-search` / `pubmed-eutils-search` / `arxiv-search` / `arxiv-medarxiv-search` / `search-japanese-literature` は `agents/openai.yaml` を同梱しており、ChatGPT / Codex 側のエージェント設定にも対応。
 - `arxiv-search` と `arxiv-medarxiv-search` の arXiv 用 CLI（`scripts/arxiv_api.py`）は同一。両方インストールすると同種の依頼でトリガーが競合しうるため、どちらか一方の利用を推奨。
