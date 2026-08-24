@@ -1,11 +1,11 @@
 # Agent-Skills
 
-Claude（claude.ai / Claude Code）向けの自作 Agent Skills 集。各 `.skill` ファイルは zip 形式で、中に `SKILL.md`（＋必要に応じて `scripts/` `references/` `agents/` `assets/`）を含む。
+Claude（claude.ai / Claude Code）向けの自作 Agent Skills 集。各スキルは `.skill` または `.zip` として配布しており、どちらも中身は同じ zip アーカイブ（`<skill-name>/` フォルダの下に `SKILL.md` ＋必要に応じて `scripts/` `references/` `agents/` `assets/`）。
 
 ## インストール
 
-- **claude.ai**: Settings → Capabilities → Skills から `.skill` ファイルをアップロード。
-- **Claude Code**: `.skill` を unzip して `~/.claude/skills/<skill-name>/` に配置。
+- **claude.ai**: Settings → Capabilities → Skills から `.skill` / `.zip` ファイルをアップロード。
+- **Claude Code**: アーカイブを unzip して `~/.claude/skills/<skill-name>/` に配置。
 - 一部スキルは `agents/openai.yaml` を同梱しており、ChatGPT / Codex 側のエージェント設定にも対応。
 
 ## スキル一覧（概要）
@@ -15,6 +15,9 @@ Claude（claude.ai / Claude Code）向けの自作 Agent Skills 集。各 `.skil
 | 文献検索 | [`pubmed-search`](#pubmed-search) | PubMed MCP を使った質の高い文献検索の作法（PICO・MeSH・引用形式） | PubMed MCP |
 | 文献検索 | [`pubmed-eutils-search`](#pubmed-eutils-search) | MCP なしで NCBI E-utilities を直接叩く PubMed 検索 CLI | Python 3（標準ライブラリのみ） |
 | 文献検索 | [`pubmed-systematic-review`](#pubmed-systematic-review) | 系統的検索→抄録から数値を正確に抽出して Excel/スライド化 | PubMed MCP |
+| 文献検索 | [`arxiv-search`](#arxiv-search) | arXiv 公式 API で再現可能なプレプリント検索（同梱 CLI） | Python 3（標準ライブラリのみ） |
+| 文献検索 | [`arxiv-medarxiv-search`](#arxiv-medarxiv-search) | arXiv＋medRxiv の横断プレプリント検索（arxiv-search の上位版） | Python 3（標準ライブラリのみ） |
+| 文献検索 | [`search-japanese-literature`](#search-japanese-literature) | J-STAGE WebAPI で和文文献をフィールド指定検索＋抄録取得 | Python 3（標準ライブラリのみ） |
 | 原稿支援 | [`pubmed-reference-verifier`](#pubmed-reference-verifier) | 本文中引用と参考文献リストの整合性検証・PubMed 照合・修正提案 | PubMed MCP |
 | 論文整理 | [`paper-summarize-to-notion`](#paper-summarize-to-notion) | 論文1本を日本語要約＋グラフィカルアブストラクト化して Notion DB に登録 | Notion MCP, 画像生成 |
 | 論文整理 | [`paper-to-one-slide-ja`](#paper-to-one-slide-ja) | 論文 PDF を日本語1枚スライド（.pptx）に凝縮 | Python 3, Presentations/pdf スキル |
@@ -61,6 +64,41 @@ PubMed から複数文献を系統的に検索し、各抄録から数値デー�
 - 最大の狙いは **fetch_batch のレスポンス切断による数値捏造の防止**。抽出フェーズをサブエージェントに分割委譲しない等の運用ルールを規定
 
 **使い方**：「文献検索して Excel に」「RCT を調べてスライドに」「エビデンスを一覧表に」など、複数文献の比較・集計を伴う依頼で発動。1件だけの検索・要約には不要。
+
+### arxiv-search
+
+公式 arXiv API を同梱 CLI（`scripts/arxiv_api.py`、Python 標準ライブラリのみ・API キー不要）で叩き、検索過程を追跡できるプレプリント検索を行うスキル。
+
+**できること**
+- `count` で検索式と総ヒット数を確認してから `search` する段階的ワークフロー（PubMed 系スキルと同じ作法）
+- キーワード（AND/OR/フレーズ一致）・著者（`au:`）・カテゴリ（`cat:`）・タイトル/抄録（`ti:`/`abs:`）・投稿日・arXiv ID を組み合わせた検索。arXiv 固有の論理式は `--raw` で直接指定
+- 出典の捏造防止：タイトル・著者・ID・日付は API の返り値からのみ引用し、`[*Title*](https://arxiv.org/abs/ID) — First Author et al., arXiv:ID (Category), first submitted YYYY-MM-DD` 形式で統一
+- CLI がレート制御（3秒以上の間隔）・リトライ・短期キャッシュを内蔵。preprint（＝査読済みではない）である点や版番号の明示も規定
+
+**使い方**：「arXiv で論文を探して」「プレプリントを検索」「この arXiv ID の論文情報」。PubMed 検索や査読済み限定の検索には使わない。
+
+### arxiv-medarxiv-search
+
+`arxiv-search` の上位版。arXiv に加えて **medRxiv**（医療系プレプリントサーバー）も公式 API で検索できる。arXiv 部分の CLI・作法は `arxiv-search` と同一なので、**通常はどちらか一方をインストールすれば足りる**（医療系を扱うならこちら）。
+
+**できること**
+- 医療・健康科学の問いでは arXiv / medRxiv の両方を別々に実行し、検索条件・件数・結果の provenance を source 別に管理（単純合算しない）
+- medRxiv は公式 details API にキーワード検索がないため、期間＋subject category で公式メタデータを取得後、title/abstract/authors をローカルで絞り込む方式（この事実を出力で明示する規定つき）
+- DOI・version 単位の重複管理、`--all-versions` による版ごとの追跡、出版済み DOI（`published_doi`）の併記
+
+**使い方**：「medRxiv（MedArxiv）を検索」「医療プレプリントを探して」「最新のプレプリント」。
+
+### search-japanese-literature
+
+J-STAGE WebAPI（記事検索 `service=3`、API キー不要）で和文文献を検索するスキル。同梱 CLI（`scripts/jstage_search.py`、Python 標準ライブラリのみ）がリクエスト構築・XML パース・抄録取得を担う。
+
+**できること**
+- フィールド指定検索：抄録（`--abstract`）・タイトル（`--article`）・著者/所属・著者キーワード・全文・誌名/ISSN・発行年範囲
+- 上位の関連レコード（1リクエスト最大20件）について、J-STAGE 記事ページから日本語/英語抄録を取得して付加（1秒以上のディレイ内蔵）
+- 複数検索の結果を DOI → 記事 URL の順でマージ・重複除去し、検索式・検索日・総ヒット数つきの再現可能な検索ログとして報告
+- J-STAGE 利用規約への配慮を組み込み：商用利用は事前承認制、機械的な大量ダウンロード禁止、API 結果の機械可読キャッシュは24時間未満、出力に「Powered by J-STAGE」を明記
+
+**使い方**：「和文論文を探して」「国内文献を検索」「J-STAGE で調べて」。国際的な系統的レビューの唯一のデータベースとしては使わない（PubMed 等と併用）。
 
 ### pubmed-reference-verifier
 
@@ -179,4 +217,5 @@ PubMed から複数文献を系統的に検索し、各抄録から数値デー�
 
 - PubMed 系スキルのツール名プレフィックス（`mcp__pubmed__*`）は MCP サーバーの登録名に合わせて読み替える（`mcp__pubmed-remote__` 等になっている環境では frontmatter の `allowed-tools` も合わせる）。
 - `ai-journal-watch` / `ai-news-digest` の「関心領域」（🔍 で優先表示するトピック）は既定で消化器・内視鏡向け。SKILL.md 冒頭の設定を書き換えれば他領域にも使える。
-- `notion-upload-image` / `paper-summarize-to-notion` / `paper-to-one-slide-ja` / `pubmed-eutils-search` は `agents/openai.yaml` を同梱しており、ChatGPT / Codex 側のエージェント設定にも対応。
+- `notion-upload-image` / `paper-summarize-to-notion` / `paper-to-one-slide-ja` / `pubmed-eutils-search` / `arxiv-search` / `arxiv-medarxiv-search` / `search-japanese-literature` は `agents/openai.yaml` を同梱しており、ChatGPT / Codex 側のエージェント設定にも対応。
+- `arxiv-search` と `arxiv-medarxiv-search` の arXiv 用 CLI（`scripts/arxiv_api.py`）は同一。両方インストールすると同種の依頼でトリガーが競合しうるため、どちらか一方の利用を推奨。
